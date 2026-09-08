@@ -41,6 +41,15 @@
   .note{font-size:12px;color:var(--muted);margin-top:6px}
   .check{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ink);margin:6px 0 4px}
   .check input{width:20px;height:20px;margin:0}
+  .hist{border:1px solid var(--line);border-radius:8px;background:#fff;margin-top:8px;max-height:360px;overflow:auto}
+  .hist .h{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .hist .h:last-child{border-bottom:0}
+  .hist .h .l{font-size:14px;min-width:0}
+  .hist .h .l b{display:block}
+  .hist .h .l small{color:var(--muted)}
+  .hist .h .a{display:flex;gap:4px;flex-shrink:0}
+  .hist .h .a button{font:inherit;font-size:12px;padding:6px 8px;border:1px solid var(--line);background:#fff;border-radius:6px;color:var(--accent);cursor:pointer}
+  .hist .empty{padding:14px;color:var(--muted);font-size:14px;text-align:center}
   .foot{font-size:13px;color:var(--muted);text-align:center;margin:28px 0 0;line-height:1.6}
   .foot a{color:var(--accent)}
   #sheet{display:none}
@@ -157,6 +166,14 @@
     </div>
   </fieldset>
 
+  <fieldset>
+    <legend data-i18n="Bill history">Bill history</legend>
+    <p class="note" style="margin:0 0 8px" data-i18n="Every printed bill is saved here. Tap Reprint to open it again, or Edit to load it into the form.">Every printed bill is saved here. Tap Reprint to open it again, or Edit to load it into the form.</p>
+    <input id="histq" data-i18n-ph="Search by bill no or party" placeholder="Search by bill no or party">
+    <div class="hist" id="hist"></div>
+    <button class="link" type="button" id="csvbtn" data-i18n="Copy all bills for Excel / Sheets">Copy all bills for Excel / Sheets</button>
+  </fieldset>
+
   <div class="totals" id="totals"></div>
   <p class="note" data-i18n="Tax is picked automatically: GSTIN starting 24 → CGST + SGST, otherwise IGST. The firm and parties on the invoice are saved automatically when you print. Tap <b>Print / PDF</b>, then choose “Save as PDF” in the print dialog.">Tax is picked automatically: GSTIN starting 24 → CGST + SGST, otherwise IGST. The firm and parties on the invoice are saved automatically when you print. Tap <b>Print / PDF</b>, then choose “Save as PDF” in the print dialog.</p>
 
@@ -178,10 +195,10 @@
   const SET=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 
   // ---- language (screen only; print stays English)
-  const GU={"New invoice": "નવું બિલ", "Set up your firm details below once — they are remembered on this phone.": "નીચે એક વાર તમારી પેઢીની વિગતો ભરો — તે આ ફોનમાં યાદ રહેશે.", "Invoice": "બિલ", "Invoice no": "બિલ નંબર", "Date": "તારીખ", "Due days": "ઉધારીના દિવસ", "Broker": "દલાલ", "Vehicle no": "વાહન નંબર", "Eway bill": "ઈ-વે બિલ", "Challan no": "ચલણ નંબર", "Bill to": "બિલ કોના નામે", "Ship to": "માલ કોને મોકલવો", "Saved party": "સેવ કરેલી પાર્ટી", "— pick a party or type below —": "— પાર્ટી પસંદ કરો અથવા નીચે લખો —", "Name": "નામ", "Address (one line per row)": "સરનામું (દરેક લાઇન અલગ)", "GSTIN": "GST નંબર", "Save this party for next time": "આ પાર્ટી સેવ કરો", "Same as bill to": "બિલ કોના નામે છે તે જ", "Items": "માલ", "Description": "વર્ણન", "HSN": "HSN", "Taka": "તાકા", "Meter": "મીટર", "Rate": "ભાવ", "Remove": "કાઢી નાખો", "+ Add item": "+ માલ ઉમેરો", "Your firm (saved on this phone)": "તમારી પેઢી (આ ફોનમાં સેવ)", "Saved firm": "સેવ કરેલી પેઢી", "— pick a firm or type below —": "— પેઢી પસંદ કરો અથવા નીચે લખો —", "Firm / seller name": "પેઢી / વેચનારનું નામ", "Address (one line)": "સરનામું (એક લાઇન)", "State code": "રાજ્ય કોડ", "Mobile": "મોબાઇલ", "Bank": "બેંક", "A/c no": "ખાતા નંબર", "IFSC": "IFSC", "Branch": "શાખા", "Save this firm": "આ પેઢી સેવ કરો", "Backup": "બેકઅપ", "Firms and parties are stored only in this browser on this phone. Export a backup file to keep them safe or move them to another phone.": "પેઢી અને પાર્ટીની વિગતો ફક્ત આ ફોનના બ્રાઉઝરમાં સેવ થાય છે. સુરક્ષિત રાખવા કે બીજા ફોનમાં લઈ જવા બેકઅપ ફાઇલ બનાવો.", "Export backup": "બેકઅપ ડાઉનલોડ કરો", "Import backup": "બેકઅપ લોડ કરો", "Taxable": "કરપાત્ર રકમ", "Rounding": "રાઉન્ડિંગ", "Final amount": "કુલ રકમ", "Copy ledger row": "ખાતાવહી લાઇન કૉપી", "Print / PDF": "પ્રિન્ટ / PDF", "Want billing software personalised for your business (party ledger, payments, e-way bill, reports)?": "તમારા ધંધા માટે ખાસ બિલિંગ સોફ્ટવેર જોઈએ છે? (પાર્ટી ખાતાવહી, પેમેન્ટ, ઈ-વે બિલ, રિપોર્ટ)", "Contact": "સંપર્ક", "or": "અથવા", "Same state → CGST 2.5% + SGST 2.5%": "એક જ રાજ્ય → CGST 2.5% + SGST 2.5%", "Other state → IGST 5%": "બીજું રાજ્ય → IGST 5%", "Saved ✓": "સેવ થયું ✓", "Copied ✓": "કૉપી થયું ✓", "Enter a party name first": "પહેલા પાર્ટીનું નામ લખો", "Enter the firm name first": "પહેલા પેઢીનું નામ લખો", "Enter your firm name under \"Your firm\"": "\"તમારી પેઢી\" માં પેઢીનું નામ લખો", "Enter an invoice number": "બિલ નંબર લખો", "Enter the party name": "પાર્ટીનું નામ લખો", "Backup imported": "બેકઅપ લોડ થયું", "That file is not a valid backup": "આ ફાઇલ યોગ્ય બેકઅપ નથી", "Tax is picked automatically: GSTIN starting 24 → CGST + SGST, otherwise IGST. The firm and parties on the invoice are saved automatically when you print. Tap <b>Print / PDF</b>, then choose “Save as PDF” in the print dialog.": "ટેક્સ આપમેળે લાગશે: પાર્ટીનો GST તમારા રાજ્યનો હોય તો CGST + SGST, નહીંતર IGST. પ્રિન્ટ કરતી વખતે પેઢી અને પાર્ટી આપમેળે સેવ થાય છે. <b>પ્રિન્ટ / PDF</b> દબાવો, પછી “Save as PDF” પસંદ કરો."};
+  const GU={"New invoice": "નવું બિલ", "Set up your firm details below once — they are remembered on this phone.": "નીચે એક વાર તમારી પેઢીની વિગતો ભરો — તે આ ફોનમાં યાદ રહેશે.", "Invoice": "બિલ", "Invoice no": "બિલ નંબર", "Date": "તારીખ", "Due days": "ઉધારીના દિવસ", "Broker": "દલાલ", "Vehicle no": "વાહન નંબર", "Eway bill": "ઈ-વે બિલ", "Challan no": "ચલણ નંબર", "Bill to": "બિલ કોના નામે", "Ship to": "માલ કોને મોકલવો", "Saved party": "સેવ કરેલી પાર્ટી", "— pick a party or type below —": "— પાર્ટી પસંદ કરો અથવા નીચે લખો —", "Name": "નામ", "Address (one line per row)": "સરનામું (દરેક લાઇન અલગ)", "GSTIN": "GST નંબર", "Save this party for next time": "આ પાર્ટી સેવ કરો", "Same as bill to": "બિલ કોના નામે છે તે જ", "Items": "માલ", "Description": "વર્ણન", "HSN": "HSN", "Taka": "તાકા", "Meter": "મીટર", "Rate": "ભાવ", "Remove": "કાઢી નાખો", "+ Add item": "+ માલ ઉમેરો", "Your firm (saved on this phone)": "તમારી પેઢી (આ ફોનમાં સેવ)", "Saved firm": "સેવ કરેલી પેઢી", "— pick a firm or type below —": "— પેઢી પસંદ કરો અથવા નીચે લખો —", "Firm / seller name": "પેઢી / વેચનારનું નામ", "Address (one line)": "સરનામું (એક લાઇન)", "State code": "રાજ્ય કોડ", "Mobile": "મોબાઇલ", "Bank": "બેંક", "A/c no": "ખાતા નંબર", "IFSC": "IFSC", "Branch": "શાખા", "Save this firm": "આ પેઢી સેવ કરો", "Backup": "બેકઅપ", "Bill history": "બિલનો રેકોર્ડ", "Every printed bill is saved here. Tap Reprint to open it again, or Edit to load it into the form.": "દરેક પ્રિન્ટ કરેલું બિલ અહીં સેવ થાય છે. ફરી કાઢવા Reprint દબાવો, સુધારવા Edit દબાવો.", "Search by bill no or party": "બિલ નંબર કે પાર્ટીથી શોધો", "Copy all bills for Excel / Sheets": "બધા બિલ Excel / Sheets માટે કૉપી કરો", "Reprint": "ફરી પ્રિન્ટ", "Edit": "સુધારો", "No bills yet": "હજુ કોઈ બિલ નથી", "Delete this bill from history?": "આ બિલ રેકોર્ડમાંથી કાઢી નાખવું?", "Firms and parties are stored only in this browser on this phone. Export a backup file to keep them safe or move them to another phone.": "પેઢી અને પાર્ટીની વિગતો ફક્ત આ ફોનના બ્રાઉઝરમાં સેવ થાય છે. સુરક્ષિત રાખવા કે બીજા ફોનમાં લઈ જવા બેકઅપ ફાઇલ બનાવો.", "Export backup": "બેકઅપ ડાઉનલોડ કરો", "Import backup": "બેકઅપ લોડ કરો", "Taxable": "કરપાત્ર રકમ", "Rounding": "રાઉન્ડિંગ", "Final amount": "કુલ રકમ", "Copy ledger row": "ખાતાવહી લાઇન કૉપી", "Print / PDF": "પ્રિન્ટ / PDF", "Want billing software personalised for your business (party ledger, payments, e-way bill, reports)?": "તમારા ધંધા માટે ખાસ બિલિંગ સોફ્ટવેર જોઈએ છે? (પાર્ટી ખાતાવહી, પેમેન્ટ, ઈ-વે બિલ, રિપોર્ટ)", "Contact": "સંપર્ક", "or": "અથવા", "Same state → CGST 2.5% + SGST 2.5%": "એક જ રાજ્ય → CGST 2.5% + SGST 2.5%", "Other state → IGST 5%": "બીજું રાજ્ય → IGST 5%", "Saved ✓": "સેવ થયું ✓", "Copied ✓": "કૉપી થયું ✓", "Enter a party name first": "પહેલા પાર્ટીનું નામ લખો", "Enter the firm name first": "પહેલા પેઢીનું નામ લખો", "Enter your firm name under \"Your firm\"": "\"તમારી પેઢી\" માં પેઢીનું નામ લખો", "Enter an invoice number": "બિલ નંબર લખો", "Enter the party name": "પાર્ટીનું નામ લખો", "Backup imported": "બેકઅપ લોડ થયું", "That file is not a valid backup": "આ ફાઇલ યોગ્ય બેકઅપ નથી", "Tax is picked automatically: GSTIN starting 24 → CGST + SGST, otherwise IGST. The firm and parties on the invoice are saved automatically when you print. Tap <b>Print / PDF</b>, then choose “Save as PDF” in the print dialog.": "ટેક્સ આપમેળે લાગશે: પાર્ટીનો GST તમારા રાજ્યનો હોય તો CGST + SGST, નહીંતર IGST. પ્રિન્ટ કરતી વખતે પેઢી અને પાર્ટી આપમેળે સેવ થાય છે. <b>પ્રિન્ટ / PDF</b> દબાવો, પછી “Save as PDF” પસંદ કરો."};
   let LANG=LS("lang")||"en";
   const t=k=>LANG==="gu"&&GU[k]?GU[k]:k;
-  function applyLang(){document.documentElement.lang=LANG==="gu"?"gu":"en";document.querySelectorAll("[data-i18n]").forEach(el=>{el.innerHTML=t(el.dataset.i18n)});document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("on",b.dataset.lang===LANG));renderItems();sub();loadParties();loadFirms()}
+  function applyLang(){document.documentElement.lang=LANG==="gu"?"gu":"en";document.querySelectorAll("[data-i18n]").forEach(el=>{el.innerHTML=t(el.dataset.i18n)});document.querySelectorAll("[data-i18n-ph]").forEach(el=>{el.placeholder=t(el.dataset.i18nPh)});document.querySelectorAll(".lang button").forEach(b=>b.classList.toggle("on",b.dataset.lang===LANG));renderItems();sub();loadParties();loadFirms();renderHist()}
   document.querySelectorAll(".lang button").forEach(b=>b.onclick=()=>{LANG=b.dataset.lang;SET("lang",LANG);applyLang()});
 
   // ---- helpers
@@ -269,11 +286,27 @@
   $("savesparty").onclick=()=>saveParty({name:$("spname").value.trim(),addr:$("spaddr").value.trim(),gst:$("spgst").value.trim().toUpperCase()},"savesparty");
 
   // ---- backup
-  $("exportbtn").onclick=()=>{const data={firms:LS("firms")||[],parties:LS("parties")||[],me:LS("me")||{},lastno:LS("lastno")||""};
+  $("exportbtn").onclick=()=>{const data={firms:LS("firms")||[],parties:LS("parties")||[],bills:LS("bills")||[],me:LS("me")||{},lastno:LS("lastno")||""};
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));a.download="invoice-backup.json";a.click()};
   $("importfile").onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);
     const merge=(k,key)=>{const cur=LS(k)||[];(d[k]||[]).forEach(x=>{const i=cur.findIndex(y=>(y[key]||"").toUpperCase()===(x[key]||"").toUpperCase());i>=0?cur[i]=x:cur.push(x)});SET(k,cur)};
-    merge("firms","sname");merge("parties","name");if(d.me&&!LS("me"))SET("me",d.me);loadFirms();loadParties();alert(t("Backup imported"))}catch(err){alert(t("That file is not a valid backup"))}};rd.readAsText(f)};
+    merge("firms","sname");merge("parties","name");{const cur=LS("bills")||[];(d.bills||[]).forEach(x=>{if(!cur.some(y=>y.no===x.no&&y.firm.sname===x.firm.sname))cur.push(x)});SET("bills",cur)}renderHist();if(d.me&&!LS("me"))SET("me",d.me);loadFirms();loadParties();alert(t("Backup imported"))}catch(err){alert(t("That file is not a valid backup"))}};rd.readAsText(f)};
+
+  // ---- bill history
+  const FORM_IDS=["no","date","duedays","broker","vehicle","eway","challan","pname","paddr","pgst","spname","spaddr","spgst"];
+  function snapshot(){return{no:$("no").value.trim(),date:$("date").value,form:Object.fromEntries(FORM_IDS.map(id=>[id,$(id).value])),same:$("sameship").checked,items:JSON.parse(JSON.stringify(items)),firm:curFirm(),taka:T.taka,meter:T.meter,sub:T.sub,final:T.final,due:addDays($("date").value,$("duedays").value),savedAt:Date.now()}}
+  function saveBill(){const h=LS("bills")||[],b=snapshot();const i=h.findIndex(x=>x.no.toUpperCase()===b.no.toUpperCase()&&x.firm.sname.toUpperCase()===b.firm.sname.toUpperCase());i>=0?h[i]=b:h.push(h.length?b:b);SET("bills",h);renderHist()}
+  function loadBill(b){FORM_IDS.forEach(id=>$(id).value=b.form[id]||"");$("sameship").checked=b.same;$("shipbox").hidden=b.same;items=JSON.parse(JSON.stringify(b.items));FIRM_IDS.forEach(id=>$(id).value=b.firm[id]||"");SET("me",curFirm());sub();renderItems();window.scrollTo({top:0,behavior:"smooth"})}
+  function renderHist(){const q=($("histq").value||"").toLowerCase();let h=(LS("bills")||[]).map((b,i)=>({...b,i})).filter(b=>!q||b.no.toLowerCase().includes(q)||(b.form.pname||"").toLowerCase().includes(q)).sort((a,b)=>b.savedAt-a.savedAt);
+    $("hist").innerHTML=h.length?h.map(b=>`<div class="h"><div class="l"><b>${esc(b.no)} · ₹ ${fmt(b.final)}</b>${esc((b.form.pname||"").toUpperCase())}<br><small>${dmy(b.date)} · ${b.taka} ${t("Taka").toLowerCase()} · ${b.meter.toFixed(2)} m · ${esc(b.firm.sname)}</small></div><div class="a"><button data-re="${b.i}">${t("Reprint")}</button><button data-ed="${b.i}">${t("Edit")}</button><button data-rm="${b.i}">✕</button></div></div>`).join(""):`<div class="empty">${t("No bills yet")}</div>`}
+  $("histq").addEventListener("input",renderHist);
+  $("hist").addEventListener("click",e=>{const d=e.target.dataset,h=LS("bills")||[];
+    if(d.re!=null){loadBill(h[d.re]);calc();build();window.print()}
+    else if(d.ed!=null){loadBill(h[d.ed]);calc()}
+    else if(d.rm!=null){if(confirm(t("Delete this bill from history?"))){h.splice(d.rm,1);SET("bills",h);renderHist()}}});
+  $("csvbtn").onclick=()=>{const h=(LS("bills")||[]).slice().sort((a,b)=>a.savedAt-b.savedAt);
+    const rows=[["Bill No","Date","Firm","Party","Party GSTIN","Taka","Meter","Taxable","Final Amount","Due Date"]].concat(h.map(b=>[b.no,dmy(b.date),b.firm.sname,b.form.pname,b.form.pgst,b.taka,b.meter,b.sub,b.final,dmy(b.due)]));
+    navigator.clipboard.writeText(rows.map(r=>r.join("\t")).join("\n")).then(()=>flash("csvbtn","Copied ✓","Copy all bills for Excel / Sheets"))};
 
   // ---- render invoice
   function build(){
@@ -315,7 +348,7 @@
   }
 
   $("print").onclick=()=>{if(!$("sname").value.trim())return alert(t('Enter your firm name under "Your firm"'));if(!$("no").value.trim())return alert(t("Enter an invoice number"));if(!$("pname").value.trim())return alert(t("Enter the party name"));
-    autosave();build();SET("lastno",$("no").value.trim());window.print()};
+    autosave();build();SET("lastno",$("no").value.trim());saveBill();window.print()};
   function autosave(){
     const f=LS("firms")||[],cur=curFirm();if(cur.sname){const i=f.findIndex(x=>x.sname.toUpperCase()===cur.sname.toUpperCase());i>=0?f[i]=cur:f.push(cur);SET("firms",f);loadFirms()}
     const p=LS("parties")||[];const up=c=>{if(!c.name)return;const i=p.findIndex(x=>x.name.toUpperCase()===c.name.toUpperCase());i>=0?p[i]=c:p.push(c)};
@@ -336,7 +369,7 @@
   // ---- init
   $("date").value=new Date().toISOString().slice(0,10);
   const last=LS("lastno");if(last){const m=last.match(/^(.*?)(\d+)$/);if(m)$("no").value=m[1]+(+m[2]+1)}
-  loadParties();addItem();applyLang();
+  loadParties();addItem();applyLang();renderHist();
 })();
 </script>
 </body>
